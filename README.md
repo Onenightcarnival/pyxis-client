@@ -1,2 +1,2 @@
 # pyxis-client
-Declarative Http Client for Python
+Simple Declarative REST Client for Python
