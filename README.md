@@ -82,3 +82,7 @@ if __name__ == "__main__":
 
 ## More
 See `example`
+
+# Extensions
+- retry (`pip install tenacity`)
+- cache (`pip install cachetools`)
