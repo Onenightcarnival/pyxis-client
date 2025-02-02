@@ -1,6 +1,12 @@
 # pyxis-client
 Simple Declarative REST Client for Python
 
+## Keywords
+- decorator
+- function signature
+- http client (httpx)
+- data validation (pydantic)
+
 # Quick Start
 
 ## Installation
@@ -57,13 +63,13 @@ if __name__ == "__main__":
     for repo in github.get_repos(user="octocat", sort_by="updated"):
         print(repo)
 
-    async_client = AsyncGitHub(
+    async_github = AsyncGitHub(
         base_url="https://api.github.com",
         default_headers={
             "Content-Type": "application/json",
         }
     )
-    for repo in asyncio.run(async_client.get_repos(user="octocat", sort_by="updated")):
+    for repo in asyncio.run(async_github.get_repos(user="octocat", sort_by="updated")):
         print(repo)
 ```
 
