@@ -37,14 +37,6 @@ class AsyncGitHub(AsyncClient):
         pass
 
 
-class ChatCompletionResponse(BaseModel):
-    id: str
-    object: str
-    created: int
-    choices: List[dict]
-    usage: dict
-
-
 if __name__ == "__main__":
     github = GitHub(
         base_url="https://api.github.com",
