@@ -1,4 +1,9 @@
-from typing import Any, Callable, Dict, Union
+import inspect
+from functools import wraps
+from typing import Callable, Dict, get_type_hints, Union
+from urllib.parse import urljoin
+
+import httpx
 
 
 class Header:
@@ -38,67 +43,141 @@ class BaseClient:
         self,
         base_url: str,
         encoding: str = "utf-8",
-        default_headers: Dict[str, Union[str, Callable]] = None
+        default_headers: Dict[str, Union[str, Callable]] = None,
+        *args, **kwargs
     ):
         self.base_url = base_url
         self.encoding = encoding
-        self.default_headers = default_headers
+        self.default_headers = default_headers or dict()
+        self.client = httpx.Client(*args, **kwargs)
 
-    def _extract_headers(self, headers: Dict[str, str]) -> Dict[str, str]:
-        pass
+    def _get_default_headers(self) -> Dict[str, str]:
+        headers = dict()
+        for key, value in self.default_headers.items():
+            headers[key] = value() if callable(value) else value
+        return headers
 
-    def _extract_body(self, body: Dict[str, Any]) -> Dict[str, str]:
-        pass
+    def _make_request(
+        self,
+        method: str,
+        endpoint: str,
+        response_handler: Callable,
+        func: Callable,
+        *args, **kwargs
+    ):
+        sig = inspect.signature(func)
+        hints = get_type_hints(func)
+        return_type = hints.get("return")
 
-    def _extract_query(self, query: Dict[str, str]) -> Dict[str, str]:
-        pass
+        path_params = dict()
+        query_params = dict()
+        headers = self._get_default_headers()
+        body = None
 
-    def _extract_path(self, path: Dict[str, str]) -> Dict[str, str]:
-        pass
+        bound_args = sig.bind(self, *args, **kwargs)
+        bound_args.apply_defaults()
 
-    def _make_request(self):
-        pass
+        for param_name, param_value in bound_args.arguments.items():
+            if param_name == "self":
+                continue
+
+            param_type = sig.parameters[param_name].annotation
+            if param_type == Path:
+                path_params[param_name] = param_value
+            elif param_type == Query:
+                query_params[param_name] = param_value
+            elif param_type == Header:
+                headers[param_name] = param_value
+            elif param_type == Body:
+                body = param_value
+
+        response = self.client.request(
+            method=method,
+            url=urljoin(self.base_url, endpoint.format(**path_params)),
+            params=query_params,
+            headers=headers,
+            json=body
+        )
+
+        if response_handler:
+            response_handler(response)
+
+        data = response.json()
+        if return_type:
+            # List[Model]
+            if getattr(return_type, '__origin__', None) is list:
+                model_type = return_type.__args__[0]
+                return [model_type.parse_obj(item) for item in data]
+            # Single Model
+            else:
+                return return_type.parse_obj(data)
+
+        return data
 
     @classmethod
-    def get(
-        cls,
-        endpoint: str,
-        response_handler: Callable = None
-    ):
+    def get(cls, endpoint: str, response_handler: Callable = None):
         """
-        Decorator for HTTP GET requests that converts response body to Pydantic models
+        Decorator for HTTP GET methods
         """
-        pass
+
+        def decorator(func):
+            @wraps(func)
+            def wrapper(self, *args, **kwargs):
+                return self._make_request(
+                    "GET", endpoint, response_handler, func, *args, **kwargs
+                )
+
+            return wrapper
+
+        return decorator
 
     @classmethod
-    def post(
-        cls,
-        endpoint: str,
-        response_handler: Callable = None
-    ):
+    def post(cls, endpoint: str, response_handler: Callable = None):
         """
-        Decorator for HTTP POST requests that converts response to Pydantic models
+        Decorator for HTTP POST methods
         """
-        pass
+
+        def decorator(func):
+            @wraps(func)
+            def wrapper(self, *args, **kwargs):
+                return self._make_request(
+                    "POST", endpoint, response_handler, func, *args, **kwargs
+                )
+
+            return wrapper
+
+        return decorator
 
     @classmethod
-    def put(
-        cls,
-        endpoint: str,
-        response_handler: Callable = None
-    ):
+    def put(cls, endpoint: str, response_handler: Callable = None):
         """
-        Decorator for HTTP PUT requests that converts response to Pydantic models
+        Decorator for HTTP PUT methods
         """
-        pass
+
+        def decorator(func):
+            @wraps(func)
+            def wrapper(self, *args, **kwargs):
+                return self._make_request(
+                    "PUT", endpoint, response_handler, func, *args, **kwargs
+                )
+
+            return wrapper
+
+        return decorator
 
     @classmethod
-    def delete(
-        cls,
-        endpoint: str,
-        response_handler: Callable = None
-    ):
+    def delete(cls, endpoint: str, response_handler: Callable = None):
         """
-        Decorator for HTTP DELETE requests that converts response to Pydantic models
+        Decorator for HTTP DELETE methods
         """
-        pass
+
+        def decorator(func):
+            @wraps(func)
+            def wrapper(self, *args, **kwargs):
+                return self._make_request(
+                    "DELETE", endpoint, response_handler, func, *args, **kwargs
+                )
+
+            return wrapper
+
+        return decorator
