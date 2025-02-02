@@ -1,10 +1,11 @@
 # pyxis-client
 Simple Declarative REST Client for Python
 
-# Installation
+# Quick Start
+
+## Installation
 `pip install -r requirements.txt`
 
-# Quick Start
 ## GitHub Example
 ```python
 import asyncio
