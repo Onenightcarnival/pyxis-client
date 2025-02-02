@@ -57,17 +57,13 @@ class BaseClient:
             headers[key] = value() if callable(value) else value
         return headers
 
-    def _make_request(
+    def _prepare_request_data(
         self,
-        method: str,
-        endpoint: str,
-        response_handler: Callable,
         func: Callable,
+        endpoint: str,
         *args, **kwargs
     ):
         sig = inspect.signature(func)
-        hints = get_type_hints(func)
-        return_type = hints.get("return")
 
         path_params = dict()
         query_params = dict()
@@ -91,28 +87,69 @@ class BaseClient:
             elif param_type == Body:
                 body = param_value
 
+        url = urljoin(self.base_url, endpoint.format(**path_params))
+
+        return url, headers, query_params, body
+
+    def _send_request(
+        self,
+        method: str,
+        url: str,
+        headers: dict,
+        query_params: dict,
+        body: dict
+    ) -> httpx.Response:
         response = self.client.request(
             method=method,
-            url=urljoin(self.base_url, endpoint.format(**path_params)),
+            url=url,
             params=query_params,
             headers=headers,
             json=body
         )
+        return response
 
+    @staticmethod
+    def _handle_response(
+        response: httpx.Response,
+        func: Callable,
+        response_handler: Callable
+    ):
         if response_handler:
             response_handler(response)
 
         data = response.json()
+
+        hints = get_type_hints(func)
+        return_type = hints.get("return")
+
         if return_type:
-            # List[Model]
+            # List[Model]（e.g. List[Repo]）
             if getattr(return_type, '__origin__', None) is list:
                 model_type = return_type.__args__[0]
                 return [model_type.parse_obj(item) for item in data]
-            # Single Model
             else:
+                # Model.parse_obj(data)
                 return return_type.parse_obj(data)
-
         return data
+
+    def _make_request(
+        self,
+        method: str,
+        endpoint: str,
+        response_handler: Callable,
+        func: Callable,
+        *args, **kwargs
+    ):
+        """
+        prepare -> send -> handle
+        """
+        url, headers, query_params, body = self._prepare_request_data(
+            func, endpoint, *args, **kwargs
+        )
+
+        response = self._send_request(method, url, headers, query_params, body)
+
+        return self._handle_response(response, func, response_handler)
 
     @classmethod
     def get(cls, endpoint: str, response_handler: Callable = None):
