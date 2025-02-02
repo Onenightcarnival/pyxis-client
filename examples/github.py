@@ -3,7 +3,7 @@ from typing import List
 
 from pydantic import BaseModel, HttpUrl
 
-from src.client import AsyncBaseClient, BaseClient, Path, Query
+from src.client import AsyncClient, BaseClient, Path, Query
 
 
 class Owner(BaseModel):
@@ -31,8 +31,8 @@ class GitHub(BaseClient):
         pass
 
 
-class AsyncGitHub(AsyncBaseClient):
-    @AsyncBaseClient.async_get("/users/{user}/repos")
+class AsyncGitHub(AsyncClient):
+    @AsyncClient.async_get("/users/{user}/repos")
     async def get_repos(self, user: Path, sort_by: Query) -> List[Repo]:
         pass
 

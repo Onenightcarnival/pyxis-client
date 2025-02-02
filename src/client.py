@@ -220,7 +220,7 @@ class BaseClient:
         return decorator
 
 
-class AsyncBaseClient(BaseClient):
+class AsyncClient(BaseClient):
     """
     Async declarative REST client based on httpx
     """
@@ -238,7 +238,7 @@ class AsyncBaseClient(BaseClient):
             default_headers=default_headers,
             *args, **kwargs
         )
-        self.client = httpx.AsyncClient(*args, **kwargs)
+        self.async_client = httpx.AsyncClient(*args, **kwargs)
 
     async def _send_async_request(
         self,
@@ -248,7 +248,7 @@ class AsyncBaseClient(BaseClient):
         query_params: dict,
         body: dict
     ) -> httpx.Response:
-        response = await self.client.request(
+        response = await self.async_client.request(
             method=method,
             url=url,
             params=query_params,

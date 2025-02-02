@@ -3,7 +3,7 @@ from typing import List
 
 from pydantic import BaseModel
 
-from src.client import AsyncBaseClient, BaseClient, Body
+from src.client import AsyncClient, BaseClient, Body
 
 
 class ChatCompletionResponse(BaseModel):
@@ -31,8 +31,8 @@ class LmStudio(BaseClient):
         pass
 
 
-class AsyncLmStudio(AsyncBaseClient):
-    @AsyncBaseClient.async_post(endpoint="/v1/chat/completions")
+class AsyncLmStudio(AsyncClient):
+    @AsyncClient.async_post(endpoint="/v1/chat/completions")
     async def chat_completions(self, **chat_completions_info: Body) -> ChatCompletionResponse:
         pass
 
