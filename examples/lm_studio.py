@@ -3,7 +3,7 @@ from typing import List
 
 from pydantic import BaseModel
 
-from src.client import AsyncClient, BaseClient, Body
+from src import AsyncClient, BaseClient, BodyMap
 
 
 class ChatCompletionResponse(BaseModel):
@@ -24,7 +24,7 @@ class LmStudio(BaseClient):
     """
 
     @BaseClient.post(endpoint="/v1/chat/completions")
-    def chat_completions(self, **chat_completions_info: Body) -> ChatCompletionResponse:
+    def chat_completions(self, chat_completions_info: BodyMap) -> ChatCompletionResponse:
         """
         Send a chat history and receive the assistant's response
         """
@@ -33,7 +33,7 @@ class LmStudio(BaseClient):
 
 class AsyncLmStudio(AsyncClient):
     @AsyncClient.async_post(endpoint="/v1/chat/completions")
-    async def chat_completions(self, **chat_completions_info: Body) -> ChatCompletionResponse:
+    async def chat_completions(self, chat_completions_info: BodyMap) -> ChatCompletionResponse:
         pass
 
 
@@ -56,7 +56,7 @@ if __name__ == "__main__":
             "Authorization": get_dynamic_lm_studio_token
         }
     )
-    print(lm_studio.chat_completions(**messages))
+    print(lm_studio.chat_completions(BodyMap(messages)))
 
     async_lm_studio = AsyncLmStudio(
         base_url="http://localhost:1234",
@@ -65,4 +65,4 @@ if __name__ == "__main__":
             "Authorization": get_dynamic_lm_studio_token
         }
     )
-    print(asyncio.run(async_lm_studio.chat_completions(**messages)))
+    print(asyncio.run(async_lm_studio.chat_completions(BodyMap(messages))))

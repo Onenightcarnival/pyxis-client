@@ -19,7 +19,7 @@ from typing import List
 
 from pydantic import BaseModel, HttpUrl
 
-from src.client import AsyncClient, BaseClient, Path, Query
+from src import AsyncClient, BaseClient, Path, Query
 
 
 class Owner(BaseModel):
@@ -60,7 +60,7 @@ if __name__ == "__main__":
             "Content-Type": "application/json",
         }
     )
-    for repo in github.get_repos(user="octocat", sort_by="updated"):
+    for repo in github.get_repos(user=Path("octocat"), sort_by=Query("updated")):
         print(repo)
 
     async_github = AsyncGitHub(
@@ -69,7 +69,7 @@ if __name__ == "__main__":
             "Content-Type": "application/json",
         }
     )
-    for repo in asyncio.run(async_github.get_repos(user="octocat", sort_by="updated")):
+    for repo in asyncio.run(async_github.get_repos(user=Path("octocat"), sort_by=Query("updated"))):
         print(repo)
 ```
 
