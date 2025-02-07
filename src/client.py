@@ -1,11 +1,21 @@
 import inspect
+from dataclasses import dataclass
 from functools import wraps
-from typing import Callable, Dict, get_type_hints, Union
+from typing import Any, Callable, Dict, get_type_hints, Union
 from urllib.parse import urljoin
 
 import httpx
 
 from src.annotations import Body, BodyMap, Header, HeaderMap, Path, Query, QueryMap
+
+
+@dataclass
+class RequestContent:
+    path: Dict[str, str]
+    query: Dict[str, str]
+    headers: Dict[str, str]
+    body: Dict[str, Any]
+    url: str
 
 
 class BaseClient:
@@ -36,13 +46,16 @@ class BaseClient:
         func: Callable,
         endpoint: str,
         *args, **kwargs
-    ):
+    ) -> RequestContent:
         sig = inspect.signature(func)
 
-        path = dict()
-        query = dict()
-        headers = self._get_default_headers()
-        body = dict()
+        content = RequestContent(
+            path=dict(),
+            query=dict(),
+            headers=self._get_default_headers(),
+            body=dict(),
+            url=str()
+        )
 
         bound_args = sig.bind(self, *args, **kwargs)
         bound_args.apply_defaults()
@@ -54,39 +67,36 @@ class BaseClient:
             param_type = sig.parameters[param_name].annotation
 
             if param_type == Path:
-                path[param_value.alias or param_name] = param_value.value
+                content.path[param_value.alias or param_name] = param_value.value
             elif param_type == Query:
-                path[param_value.alias or param_name] = param_value.value
+                content.query[param_value.alias or param_name] = param_value.value
             elif param_type == Header:
-                path[param_value.alias or param_name] = param_value.value
+                content.headers[param_value.alias or param_name] = param_value.value
             elif param_type == Body:
-                path[param_value.alias or param_name] = param_value.value
+                content.body[param_value.alias or param_name] = param_value.value
 
             if param_type == QueryMap:
-                query.update(param_value.value)
+                content.query.update(param_value.value)
             elif param_type == HeaderMap:
-                headers.update(param_value.value)
+                content.headers.update(param_value.value)
             elif param_type == BodyMap:
-                body.update(param_value.value)
+                content.body.update(param_value.value)
 
-        url = urljoin(self.base_url, endpoint.format(**path))
+        content.url = urljoin(self.base_url, endpoint.format(**content.path))
 
-        return url, headers, query, body
+        return content
 
     def _send_request(
         self,
         method: str,
-        url: str,
-        headers: dict,
-        query_params: dict,
-        body: dict
+        content: RequestContent,
     ) -> httpx.Response:
         response = self.client.request(
             method=method,
-            url=url,
-            params=query_params,
-            headers=headers,
-            json=body
+            url=content.url,
+            params=content.query,
+            headers=content.headers,
+            json=content.body
         )
         return response
 
@@ -125,12 +135,8 @@ class BaseClient:
         """
         prepare -> send -> handle
         """
-        url, headers, query_params, body = self._prepare_request_data(
-            func, endpoint, *args, **kwargs
-        )
-
-        response = self._send_request(method, url, headers, query_params, body)
-
+        content = self._prepare_request_data(func, endpoint, *args, **kwargs)
+        response = self._send_request(method, content)
         return self._handle_response(response, func, response_handler)
 
     @classmethod

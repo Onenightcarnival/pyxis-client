@@ -3,7 +3,7 @@ from typing import Callable, Dict, Union
 
 import httpx
 
-from src.client import BaseClient
+from src.client import BaseClient, RequestContent
 
 
 class AsyncClient(BaseClient):
@@ -29,17 +29,14 @@ class AsyncClient(BaseClient):
     async def _send_async_request(
         self,
         method: str,
-        url: str,
-        headers: dict,
-        query_params: dict,
-        body: dict
+        content: RequestContent
     ) -> httpx.Response:
         response = await self.async_client.request(
             method=method,
-            url=url,
-            params=query_params,
-            headers=headers,
-            json=body
+            url=content.url,
+            params=content.query,
+            headers=content.headers,
+            json=content.body
         )
         return response
 
@@ -54,12 +51,8 @@ class AsyncClient(BaseClient):
         """
         prepare -> send -> handle
         """
-        url, headers, query_params, body = self._prepare_request_data(
-            func, endpoint, *args, **kwargs
-        )
-
-        response = await self._send_async_request(method, url, headers, query_params, body)
-
+        content = self._prepare_request_data(func, endpoint, *args, **kwargs)
+        response = await self._send_async_request(method, content)
         return self._handle_response(response, func, response_handler)
 
     @classmethod
