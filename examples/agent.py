@@ -83,21 +83,6 @@ class Agent:
         """Check if the user input is an exit command"""
         return user_input.lower().strip() in self.config.exit_commands
 
-    async def async_generate_response(self) -> str:
-        """Generate a response using the async client"""
-        if not isinstance(self.client, AsyncLmStudio):
-            raise ValueError("Async generation requires an AsyncLmStudio client")
-
-        messages = self._prepare_messages()
-        response = await self.client.chat_completions(BodyMap(messages))
-
-        if response.choices:
-            content = response.choices[0].get('message', {}).get('content', '')
-            processed_content = self.message_processor(content)
-            self.add_message(processed_content, Role.ASSISTANT)
-            return processed_content
-        return ""
-
     def generate_response(self) -> str:
         """Generate a response using the sync client"""
         if not isinstance(self.client, LmStudio):
